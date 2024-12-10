@@ -1,14 +1,17 @@
 # rootdump
 
-A Python library for dumping directory contents into a single text file. It allows you to easily inspect and document your project structure and file contents.
+[![PyPI version](https://badge.fury.io/py/rootdump.svg)](https://badge.fury.io/py/rootdump)
+[![Python Versions](https://img.shields.io/pypi/pyversions/rootdump.svg)](https://pypi.org/project/rootdump/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A Python library for dumping directory contents into a single organized text file. Perfect for code reviews, documentation, and project analysis.
 
 ## Features
 
-- Dump all text files from a directory into a single file
-- Exclude binary files (optional)
-- Filter files by extension
-- Generate tree-style directory structure visualization
-- UTF-8 support
+✨ **Tree Structure** - Displays directory structure in a tree format  
+📝 **Content Dump** - Dumps the content of all text files  
+🔍 **Extension Filtering** - Filter files by extension  
+⚡ **Binary Detection** - Automatically excludes binary files  
 
 ## Installation
 
@@ -16,26 +19,24 @@ A Python library for dumping directory contents into a single text file. It allo
 pip install rootdump
 ```
 
-## Usage
+## Quick Start
 
-### Command Line Interface
+### Command Line Usage
 
 Basic usage:
 ```bash
 rootdump /path/to/source output.txt
 ```
 
-Exclude binary files:
+With options:
 ```bash
+# Exclude binary files
 rootdump /path/to/source output.txt --exclude-binary
-```
 
-Include only specific file extensions:
-```bash
+# Include only specific extensions
 rootdump /path/to/source output.txt --extensions .py .txt .md
 
-Skip directory tree structure:
-```bash
+# Skip directory tree structure
 rootdump /path/to/source output.txt --no-tree
 ```
 
@@ -47,42 +48,45 @@ from rootdump import dump_directory
 # Basic usage
 dump_directory("source_dir", "output.txt")
 
-# Exclude binary files and include only specific extensions
+# With options
 dump_directory(
     "source_dir",
     "output.txt",
     exclude_binary=True,
     include_extensions=[".py", ".txt"],
-    show_tree=True  # Set to False to skip directory tree
+    show_tree=True
 )
 ```
 
-## Output Format
+## Output Example
 
-The output file will contain:
-
-1. A tree-style directory structure overview
-2. Contents of each file, separated by headers showing the relative path
-
-Example output:
 ```
 # Directory structure:
 # .
 # ├── src/
 # │   ├── __init__.py
-# │   └── core.py
-# └── tests/
-#     └── test_core.py
+# │   └── main.py
+# ├── tests/
+# │   └── test_main.py
+# └── README.md
 
 ## src/__init__.py
 
-[file contents here]
+[content here]
 
-## src/core.py
+## src/main.py
 
-[file contents here]
+[content here]
 ```
+
+## Contributing
+
+Contributions are welcome! Feel free to:
+
+- Report issues
+- Suggest features
+- Submit pull requests
 
 ## License
 
-MIT License
+This project is licensed under the MIT License - see the LICENSE file for details.
