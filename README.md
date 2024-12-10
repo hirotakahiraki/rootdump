@@ -87,6 +87,10 @@ Contributions are welcome! Feel free to:
 - Suggest features
 - Submit pull requests
 
+## Acknowledgments
+
+This project was inspired by [uithub.com](https://uithub.com)'s project structure visualization.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
