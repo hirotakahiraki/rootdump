@@ -92,6 +92,7 @@ def dump_directory(
     exclude_binary: bool = True,
     include_extensions: Optional[List[str]] = None,
     show_tree: bool = True,
+    show_line_numbers: bool = True,
 ) -> None:
     """
     Dump the contents of a directory into a single file, including a tree structure.
@@ -102,6 +103,7 @@ def dump_directory(
         exclude_binary (bool): Whether to exclude binary files
         include_extensions (List[str], optional): List of extensions to include
         show_tree (bool): Whether to show the directory tree structure
+        show_line_numbers (bool): Whether to show line numbers
 
     Returns:
         None
@@ -142,11 +144,15 @@ def dump_directory(
 
                 # Read file contents
                 with open(path, 'r', encoding='utf-8') as content_file:
-                    content = content_file.read()
+                    f.write(f"\n## {relative_path}\n\n")
 
-                # Write formatted output
-                f.write(f"\n## {relative_path}\n\n")
-                f.write(f"{content}\n\n")
+                    # Write file contents with or without line numbers
+                    if show_line_numbers:
+                        for line_num, line in enumerate(content_file, 1):
+                            f.write(f"{line_num} | {line}")
+                    else:
+                        for line in content_file:
+                            f.write(line)
 
             except (UnicodeDecodeError, PermissionError):
                 continue
@@ -160,6 +166,8 @@ def main():
     parser.add_argument('--exclude-binary', action='store_true', help='Exclude binary files')
     parser.add_argument('--extensions', nargs='+', help='Include only specific extensions')
     parser.add_argument('--no-tree', action='store_true', help='Do not include directory tree structure')
+    parser.add_argument('--no-line-numbers', action='store_false', dest='show_line_numbers', help='Do not include line numbers')
+    parser.set_defaults(show_line_numbers=True)
 
     args = parser.parse_args()
     dump_directory(
@@ -167,7 +175,8 @@ def main():
         args.output_path,
         exclude_binary=args.exclude_binary,
         include_extensions=args.extensions,
-        show_tree=not args.no_tree
+        show_tree=not args.no_tree,
+        show_line_numbers=args.show_line_numbers
     )
 
 

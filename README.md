@@ -12,6 +12,7 @@ A Python library for dumping directory contents into a single organized text fil
 📝 **Content Dump** - Dumps the content of all text files  
 🔍 **Extension Filtering** - Filter files by extension  
 ⚡ **Binary Detection** - Automatically excludes binary files  
+🔢 **Line Numbers** - Includes line numbers with a separator for easy reading.
 
 ## Installation
 
@@ -38,6 +39,9 @@ rootdump /path/to/source output.txt --extensions .py .txt .md
 
 # Skip directory tree structure
 rootdump /path/to/source output.txt --no-tree
+
+# Exclude line numbers from the output
+rootdump /path/to/source output.txt --no-line-numbers
 ```
 
 ### Python API
@@ -54,7 +58,8 @@ dump_directory(
     "output.txt",
     exclude_binary=True,
     include_extensions=[".py", ".txt"],
-    show_tree=True
+    show_tree=True,
+    show_line_numbers=True
 )
 ```
 
@@ -72,11 +77,16 @@ dump_directory(
 
 ## src/__init__.py
 
-[content here]
+1 | def hello():
+2 |     print("Hello from src/__init__.py")
 
 ## src/main.py
 
-[content here]
+1 | def main():
+2 |     print("Hello from src/main.py")
+3 |
+4 | if __name__ == "__main__":
+5 |     main()
 ```
 
 ## Contributing
