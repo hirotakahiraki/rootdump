@@ -12,7 +12,8 @@ A Python library for dumping directory contents into a single organized text fil
 📝 **Content Dump** - Dumps the content of all text files  
 🔍 **Extension Filtering** - Filter files by extension  
 ⚡ **Binary Detection** - Automatically excludes binary files  
-🔢 **Line Numbers** - Includes line numbers with a separator for easy reading.
+🔢 **Line Numbers** - Includes line numbers with a separator for easy reading  
+🚫 **Ignore Patterns** - Supports .gitignore-style pattern matching for excluding files and directories
 
 ## Installation
 
@@ -42,6 +43,29 @@ rootdump /path/to/source output.txt --no-tree
 
 # Exclude line numbers from the output
 rootdump /path/to/source output.txt --no-line-numbers
+
+# Use ignore patterns file
+rootdump /path/to/source output.txt --ignore-file .dumpignore
+```
+
+### Ignore Patterns
+
+Create a `.dumpignore` file to exclude specific files and directories. The syntax is similar to `.gitignore`:
+
+```gitignore
+# Ignore specific directories
+node_modules/
+.git/
+tests/
+
+# Ignore file patterns
+*.pyc
+*.log
+.DS_Store
+
+# Ignore specific files
+config.json
+secrets.yaml
 ```
 
 ### Python API
@@ -59,7 +83,8 @@ dump_directory(
     exclude_binary=True,
     include_extensions=[".py", ".txt"],
     show_tree=True,
-    show_line_numbers=True
+    show_line_numbers=True,
+    ignore_file=".dumpignore"  # Use ignore patterns file
 )
 ```
 

@@ -2,6 +2,27 @@ import os
 import pathlib
 from typing import List, Optional
 import mimetypes
+from pathspec import PathSpec
+from pathspec.patterns import GitWildMatchPattern
+
+
+def read_exclude_patterns(exclude_file: str) -> PathSpec:
+    """
+    Read exclude patterns from a file and create a PathSpec object.
+
+    Args:
+        exclude_file (str): Path to the exclude patterns file
+
+    Returns:
+        PathSpec: PathSpec object for pattern matching
+    """
+    try:
+        with open(exclude_file, 'r') as f:
+            # Filter out empty lines and comments
+            patterns = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        return PathSpec.from_lines(GitWildMatchPattern, patterns)
+    except FileNotFoundError:
+        return PathSpec.from_lines(GitWildMatchPattern, [])
 
 
 def is_binary_file(file_path: str) -> bool:
@@ -20,6 +41,7 @@ def generate_tree(
     is_last: bool = True,
     exclude_binary: bool = True,
     include_extensions: Optional[List[str]] = None,
+    exclude_patterns: Optional[PathSpec] = None,
 ) -> str:
     """
     Generate a tree-style representation of the directory structure.
@@ -30,6 +52,7 @@ def generate_tree(
         is_last (bool): Whether this is the last item in the current directory
         exclude_binary (bool): Whether to exclude binary files
         include_extensions (List[str], optional): List of extensions to include
+        exclude_patterns (PathSpec, optional): PathSpec object for pattern matching
 
     Returns:
         str: Tree-style representation of the directory
@@ -37,15 +60,31 @@ def generate_tree(
     if not root_path.exists():
         return ""
 
+    # Get relative path for pattern matching
+    if prefix == "":  # root level
+        relative_path = "."
+    else:
+        try:
+            relative_path = str(root_path.relative_to(root_path.parent))
+        except ValueError:
+            return ""
+
+    # Check if this path should be excluded
+    # Always check against the root path first
+    abs_root_path = root_path if prefix == "" else root_path.parent
+    try:
+        root_relative_path = str(root_path.relative_to(abs_root_path))
+        if exclude_patterns and exclude_patterns.match_file(root_relative_path):
+            return ""
+    except ValueError:
+        pass
+
     # Determine the marker and next prefix
     marker = "└── " if is_last else "├── "
     next_prefix = prefix + ("    " if is_last else "│   ")
 
     # Get the name of the current path
-    if prefix == "":  # root level
-        name = "."
-    else:
-        name = root_path.name
+    name = "." if prefix == "" else root_path.name
 
     # Start with the current directory/file
     tree = prefix + marker + name
@@ -61,6 +100,14 @@ def generate_tree(
         # Filter contents based on criteria
         filtered_contents = []
         for item in contents:
+            # Get the relative path from the root directory for pattern matching
+            try:
+                relative_item_path = str(item.relative_to(abs_root_path))
+                if exclude_patterns and exclude_patterns.match_file(relative_item_path):
+                    continue
+            except ValueError:
+                continue
+
             if item.is_dir():
                 filtered_contents.append(item)
             elif item.is_file():
@@ -78,7 +125,8 @@ def generate_tree(
                 next_prefix,
                 is_last_item,
                 exclude_binary,
-                include_extensions
+                include_extensions,
+                exclude_patterns
             )
     else:
         tree += "\n"
@@ -93,6 +141,7 @@ def dump_directory(
     include_extensions: Optional[List[str]] = None,
     show_tree: bool = True,
     show_line_numbers: bool = True,
+    exclude_file: Optional[str] = None,
 ) -> None:
     """
     Dump the contents of a directory into a single file, including a tree structure.
@@ -104,11 +153,13 @@ def dump_directory(
         include_extensions (List[str], optional): List of extensions to include
         show_tree (bool): Whether to show the directory tree structure
         show_line_numbers (bool): Whether to show line numbers
+        exclude_file (str, optional): Path to file containing exclude patterns
 
     Returns:
         None
     """
     root_path = pathlib.Path(root_path).resolve()
+    exclude_patterns = read_exclude_patterns(exclude_file) if exclude_file else None
 
     with open(output_path, 'w', encoding='utf-8') as f:
         # Add the tree structure if requested
@@ -116,7 +167,8 @@ def dump_directory(
             tree = generate_tree(
                 root_path,
                 exclude_binary=exclude_binary,
-                include_extensions=include_extensions
+                include_extensions=include_extensions,
+                exclude_patterns=exclude_patterns
             )
             f.write("# Directory structure:\n")
             for line in tree.split('\n'):
@@ -129,6 +181,14 @@ def dump_directory(
             if not path.is_file():
                 continue
 
+            try:
+                relative_path = str(path.relative_to(root_path))
+            except ValueError:
+                continue
+
+            if exclude_patterns and exclude_patterns.match_file(relative_path):
+                continue
+
             if include_extensions and path.suffix not in include_extensions:
                 continue
 
@@ -136,23 +196,41 @@ def dump_directory(
                 continue
 
             try:
-                relative_path = path.relative_to(root_path)
-
                 # Skip the output file itself
-                if str(relative_path) == os.path.basename(output_path):
+                if relative_path == os.path.basename(output_path):
+                    continue
+
+                # Check if file is empty
+                if os.path.getsize(path) == 0:
                     continue
 
                 # Read file contents
                 with open(path, 'r', encoding='utf-8') as content_file:
+                    # Read first chunk to check if file actually has content
+                    content = content_file.read(4096)  # Read first 4KB
+                    if not content.strip():
+                        continue
+
+                    # File has content, write header
                     f.write(f"\n## {relative_path}\n\n")
 
-                    # Write file contents with or without line numbers
+                    # Write the first chunk we read
                     if show_line_numbers:
-                        for line_num, line in enumerate(content_file, 1):
+                        for line_num, line in enumerate(content.splitlines(True), 1):
                             f.write(f"{line_num} | {line}")
                     else:
-                        for line in content_file:
-                            f.write(line)
+                        f.write(content)
+
+                    # Continue reading and writing the rest of the file
+                    while True:
+                        content = content_file.read(4096)
+                        if not content:
+                            break
+                        if show_line_numbers:
+                            for line_num, line in enumerate(content.splitlines(True), line_num + 1):
+                                f.write(f"{line_num} | {line}")
+                        else:
+                            f.write(content)
 
             except (UnicodeDecodeError, PermissionError):
                 continue
@@ -167,6 +245,7 @@ def main():
     parser.add_argument('--extensions', nargs='+', help='Include only specific extensions')
     parser.add_argument('--no-tree', action='store_true', help='Do not include directory tree structure')
     parser.add_argument('--no-line-numbers', action='store_false', dest='show_line_numbers', help='Do not include line numbers')
+    parser.add_argument('--ignore-file', help='Path to file containing ignore patterns')
     parser.set_defaults(show_line_numbers=True)
 
     args = parser.parse_args()
@@ -176,7 +255,8 @@ def main():
         exclude_binary=args.exclude_binary,
         include_extensions=args.extensions,
         show_tree=not args.no_tree,
-        show_line_numbers=args.show_line_numbers
+        show_line_numbers=args.show_line_numbers,
+        exclude_file=args.ignore_file
     )
 
 
